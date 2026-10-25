@@ -233,14 +233,19 @@ function esc(s){return String(s).replace(/[&<>"]/g,function(c){return {'&':'&amp
 /* 저장·내보내기 */
 function stamp(){var d=new Date(),p=function(n){return String(n).padStart(2,'0')};return d.getFullYear()+'년'+p(d.getMonth()+1)+'월'+p(d.getDate())+'일'+p(d.getHours())+'시'+p(d.getMinutes())+'분'}
 function save(cb){collect();cur.updated=Date.now();putRec(cur,function(){cb&&cb()})}
-$('btnSave').onclick=function(){save(function(){toast('임시저장했습니다. 휴대폰 안에 보관됩니다.')})};
-$('btnExport').onclick=function(){save(function(){
+$('btnSave').onclick=function(){if(!pendingSig())return;save(function(){toast('임시저장했습니다. 휴대폰 안에 보관됩니다.')})};
+function pendingSig(){ /* 서명을 그렸는데 [서명 추가]를 누르지 않은 경우 */
+ if(!dirty)return true;var nm=$('s_name').value.trim();
+ if(!nm){alert('그려 둔 서명이 아직 추가되지 않았습니다. 성명을 입력하고 [서명 추가]를 눌러 주세요.');return false}
+ cur.sigs.push({name:nm,img:cv.toDataURL('image/png')});$('s_name').value='';cx.clearRect(0,0,cv.width,cv.height);dirty=false;drawSigs();return true}
+$('btnExport').onclick=function(){if(!pendingSig())return;save(function(){
  var bad=[];if(!cur.project)bad.push('사업단명');if(!cur.inspector)bad.push('점검자');
  if(bad.length){alert(bad.join(', ')+'을(를) 입력해야 파일 이름을 만들 수 있습니다.');return}
  var miss=0;for(var k in cur.answers)if(!cur.answers[k].r)miss++;
  if(miss&&!confirm('결과를 고르지 않은 항목이 '+miss+'개 있습니다. 그대로 내보낼까요?'))return;
  var obj={format:'field_safety',version:1,exported:new Date().toISOString(),record:cur};
  var name=cur.project+'-'+stamp()+'-'+cur.inspector+'.json';
+ if(!confirm('사진 '+cur.photos.length+'장, 서명 '+cur.sigs.length+'명을 파일로 내보냅니다.'))return;
  var blob=new Blob([JSON.stringify(obj)],{type:'application/json'});
  var a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=name;document.body.appendChild(a);a.click();
  setTimeout(function(){URL.revokeObjectURL(a.href);a.remove()},1000);toast('파일로 내보냈습니다: '+name)})};
