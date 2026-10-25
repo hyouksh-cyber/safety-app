@@ -67,8 +67,9 @@ canvas.sig{width:100%;height:150px;background:#fff;border:1.5px dashed var(--lin
     <label for="f_date">점검 일시</label><input type="datetime-local" id="f_date" name="date">
     <label for="f_inspector">점검자</label><input id="f_inspector" name="inspector" placeholder="이름">
     <label for="f_type">사업유형</label>
-    <select id="f_type" name="type"><option value="">선택</option><option>공익활동</option><option>역량활용</option><option>공동체사업</option><option>취업형</option></select>
-    <label for="f_project">사업단명</label><input id="f_project" name="project">
+    <select id="f_type" name="type"><option value="">선택</option><option>공익활동</option><option>역량활용</option><option>특화형</option><option>공동체사업</option><option>기타</option></select>
+    <label for="f_project">사업단명</label><select id="f_project" name="project"></select>
+    <input id="f_project_other" class="hide" placeholder="사업단명 직접 입력" style="margin-top:8px">
     <label for="f_place">활동 장소</label><input id="f_place" name="place">
   </div>
   <div id="sections"></div>
@@ -118,6 +119,13 @@ var SECTIONS=[
  ["3. 활동 현장 안전 환경",["바닥에 미끄러운 물질(물, 기름)이나 걸려 넘어질 장애물은 없는가?","활동 구역 내에 위험한 경사로, 계단, 단차가 표시되어 있는가?","차량 통행이 잦은 곳에서 활동 시 안전 경고판/안전봉이 설치되었는가?","활동 장소 인근에 비상 구급함이 비치되어 있는가?"]],
  ["4. 장비 및 도구 안전",["사용하는 도구(집게, 빗자루 등)의 손잡이가 파손되지 않았는가?","무거운 물건을 직접 들어 올리는 무리한 작업은 없는가?","전기 기구 사용 시 전선 피복이 벗겨진 곳은 없는가?"]]
 ];
+var PROJECTS=[
+ ["공익활동",["방역기동대","커피박재활용","좋은학교든든도우미","어린이집아동안전","새싹돌보미","로하스지킴이","자원재활용(리사이클)사업"]],
+ ["역량활용",["유아언어발달촉진지원사업","시니어금융강사사업","대덕구보조기관리원","스마트시니어도우미","대덕재난안전지킴이","ESG교육강사","시니어놀봄교실","대덕경로당관리매니저","시니어푸드뱅크매니저사업","무연고장례동행서비스사업","대덕구사회서비스지원사업","실버동행안심서비스사업","시니어컨설턴트사업","새싹지킴이사업"]],
+ ["특화형",["유아돌봄특화형시범사업"]],
+ ["공동체사업",["CAFE WE_우리","자원순환종합유통센터","DSC다과류유통사업","대덕공동작업장","노인일자리서포터즈사업","통합돌봄사업","우리팜(블루베리농장, 카페운영)","좋은일터(청소용역사업)","DSC친환경세차","OK6070아파트택배사업","시니어인력뱅크"]],
+ ["기타",["시니어금연지도원","취업지원사업(민간경쟁)","현장실습훈련사업(민간경쟁)","인센티브사업"]]
+];
 var DB=null, cur=null;
 function $(i){return document.getElementById(i)}
 function uid(){return 'c'+Date.now().toString(36)+Math.random().toString(36).slice(2,6)}
@@ -133,6 +141,16 @@ function allRecs(cb){if(!DB){cb([]);return}var o=[],c=DB.transaction('rec').obje
 function delRec(id,cb){var t=DB.transaction('rec','readwrite');t.objectStore('rec').delete(id);t.oncomplete=cb}
 
 /* 화면 만들기 */
+function buildProjects(){var h='<option value="">사업단 선택</option>';
+ PROJECTS.forEach(function(g){h+='<optgroup label="'+g[0]+'">';g[1].forEach(function(n){h+='<option value="'+esc(n)+'">'+esc(n)+'</option>'});h+='</optgroup>'});
+ h+='<option value="__other">목록에 없음 (직접 입력)</option>';$('f_project').innerHTML=h}
+function typeOf(n){for(var i=0;i<PROJECTS.length;i++)if(PROJECTS[i][1].indexOf(n)>=0)return PROJECTS[i][0];return ''}
+function setProject(n){var sel=$('f_project'),o=$('f_project_other');
+ if(!n){sel.value='';o.value='';o.classList.add('hide');return}
+ if(typeOf(n)){sel.value=n;o.value='';o.classList.add('hide')}else{sel.value='__other';o.value=n;o.classList.remove('hide')}}
+function getProject(){var v=$('f_project').value;return v==='__other'?$('f_project_other').value.trim():v}
+$('f_project').addEventListener('change',function(){var v=this.value;$('f_project_other').classList.toggle('hide',v!=='__other');
+ var t=typeOf(v);if(t)$('f_type').value=t});
 function build(){
  var h='';
  SECTIONS.forEach(function(s,i){h+='<div class="card"><h2>'+s[0]+'</h2>';
@@ -146,7 +164,7 @@ function build(){
  $('sections').innerHTML=h;
 }
 function fill(r){
- $('f_date').value=r.date;$('f_inspector').value=r.inspector;$('f_type').value=r.type;$('f_project').value=r.project;$('f_place').value=r.place;
+ $('f_date').value=r.date;$('f_inspector').value=r.inspector;$('f_type').value=r.type;setProject(r.project);$('f_place').value=r.place;
  Object.keys(r.answers).forEach(function(k){var a=r.answers[k];
   var el=document.querySelector('input[name="'+k+'"][value="'+a.r+'"]');if(el)el.checked=true;else{var o2=document.querySelector('input[name="'+k+'"]:checked');if(o2)o2.checked=false}
   $('n_'+k).value=a.n;$('it_'+k).classList.toggle('bad',a.r==='x')});
@@ -154,7 +172,7 @@ function fill(r){
  $('f_actions').value=r.actions;drawThumbs();drawSigs();
 }
 function collect(){
- cur.date=$('f_date').value;cur.inspector=$('f_inspector').value.trim();cur.type=$('f_type').value;cur.project=$('f_project').value.trim();cur.place=$('f_place').value.trim();
+ cur.date=$('f_date').value;cur.inspector=$('f_inspector').value.trim();cur.type=$('f_type').value;cur.project=getProject();cur.place=$('f_place').value.trim();
  Object.keys(cur.answers).forEach(function(k){var c=document.querySelector('input[name="'+k+'"]:checked');cur.answers[k]={r:c?c.value:'',n:$('n_'+k).value}});
  var o=document.querySelector('input[name="overall"]:checked');cur.overall=o?o.value:'보통';cur.actions=$('f_actions').value;
  if(cur.inspector)localStorage.setItem('fs_inspector',cur.inspector);
@@ -227,6 +245,7 @@ window.addEventListener('pagehide',function(){if(cur&&DB){try{collect();cur.upda
 
 if('serviceWorker' in navigator&&(location.protocol==='https:'||location.hostname==='localhost')){navigator.serviceWorker.register('sw.js').catch(function(){})}
 if(navigator.storage&&navigator.storage.persist){navigator.storage.persist().catch(function(){})}
+buildProjects();
 build();
 openDB(function(){
  allRecs(function(rs){cur=rs.length&&!rs[0].exported&&rs[0]?rs[0]:blank();fill(cur);sizeCanvas()})});
