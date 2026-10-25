@@ -70,6 +70,15 @@ canvas.sig{width:100%;height:150px;background:#fff;border:1.5px dashed var(--lin
     <select id="f_type" name="type"><option value="">선택</option><option>공익활동</option><option>역량활용</option><option>특화형</option><option>공동체사업</option><option>기타</option></select>
     <label for="f_project">사업단명</label><select id="f_project" name="project"></select>
     <input id="f_project_other" class="hide" placeholder="사업단명 직접 입력" style="margin-top:8px">
+    <div class="row" style="margin-top:8px"><button type="button" class="btn line" id="pjToggle">사업단 추가 / 관리</button></div>
+    <div class="hide" id="pjPanel" style="margin-top:10px;padding:12px;border:1px solid var(--line);border-radius:10px">
+      <label for="pj_name" style="margin-top:0">추가할 사업단명</label><input id="pj_name">
+      <label for="pj_type">사업유형</label>
+      <select id="pj_type"><option>공익활동</option><option>역량활용</option><option>특화형</option><option>공동체사업</option><option>기타</option></select>
+      <div class="row" style="margin-top:10px"><button type="button" class="btn" id="pjAdd">추가</button></div>
+      <div class="msg">추가한 사업단은 이 휴대폰에만 저장됩니다. 다른 직원의 휴대폰에는 나타나지 않습니다.</div>
+      <div id="pjCustom"></div>
+    </div>
     <label for="f_place">활동 장소</label><input id="f_place" name="place">
   </div>
   <div id="sections"></div>
@@ -143,8 +152,22 @@ function delRec(id,cb){var t=DB.transaction('rec','readwrite');t.objectStore('re
 /* 화면 만들기 */
 function buildProjects(){var h='<option value="">사업단 선택</option>';
  PROJECTS.forEach(function(g){h+='<optgroup label="'+g[0]+'">';g[1].forEach(function(n){h+='<option value="'+esc(n)+'">'+esc(n)+'</option>'});h+='</optgroup>'});
+ var c=getCustom();if(c.length){h+='<optgroup label="추가한 사업단">';c.forEach(function(x){h+='<option value="'+esc(x.n)+'">'+esc(x.n)+'</option>'});h+='</optgroup>'}
  h+='<option value="__other">목록에 없음 (직접 입력)</option>';$('f_project').innerHTML=h}
-function typeOf(n){for(var i=0;i<PROJECTS.length;i++)if(PROJECTS[i][1].indexOf(n)>=0)return PROJECTS[i][0];return ''}
+function getCustom(){try{var a=JSON.parse(localStorage.getItem('fs_projects')||'[]');return Array.isArray(a)?a:[]}catch(e){return []}}
+function setCustom(a){try{localStorage.setItem('fs_projects',JSON.stringify(a))}catch(e){alert('이 휴대폰에서는 사업단을 저장하지 못했습니다.')}}
+function typeOf(n){for(var i=0;i<PROJECTS.length;i++)if(PROJECTS[i][1].indexOf(n)>=0)return PROJECTS[i][0];
+ var c=getCustom();for(var j=0;j<c.length;j++)if(c[j].n===n)return c[j].t;return ''}
+function drawCustom(){var c=getCustom(),h='';c.forEach(function(x,i){h+='<div class="sigitem"><b style="flex:1">'+esc(x.n)+' <span class="tag">'+esc(x.t)+'</span></b><button type="button" class="btn red" data-pj="'+i+'">삭제</button></div>'});
+ $('pjCustom').innerHTML=h||'<div class="msg">추가한 사업단이 없습니다.</div>'}
+$('pjToggle').onclick=function(){$('pjPanel').classList.toggle('hide');drawCustom()};
+$('pjAdd').onclick=function(){var n=$('pj_name').value.trim();if(!n){alert('사업단명을 입력해 주세요.');return}
+ if(typeOf(n)){alert('이미 목록에 있는 사업단입니다.');return}
+ var c=getCustom();c.push({n:n,t:$('pj_type').value});setCustom(c);$('pj_name').value='';
+ var keep=n;buildProjects();$('f_project').value=keep;$('f_type').value=typeOf(keep);$('f_project_other').classList.add('hide');drawCustom()};
+$('pjCustom').onclick=function(e){var i=e.target.getAttribute&&e.target.getAttribute('data-pj');if(i===null||i===undefined)return;
+ var c=getCustom();if(!confirm('"'+c[+i].n+'"을(를) 목록에서 지울까요? 이미 저장한 점검 기록은 지워지지 않습니다.'))return;
+ c.splice(+i,1);setCustom(c);var cur0=$('f_project').value;buildProjects();$('f_project').value=typeOf(cur0)?cur0:'';drawCustom()};
 function setProject(n){var sel=$('f_project'),o=$('f_project_other');
  if(!n){sel.value='';o.value='';o.classList.add('hide');return}
  if(typeOf(n)){sel.value=n;o.value='';o.classList.add('hide')}else{sel.value='__other';o.value=n;o.classList.remove('hide')}}
