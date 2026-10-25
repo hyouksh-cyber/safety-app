@@ -1,0 +1,235 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>현장 안전점검</title>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<meta name="theme-color" content="#2f4a8a">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="안전점검">
+<style>
+:root{--bg:#f4f6fa;--card:#fff;--ink:#16213a;--sub:#5b6577;--line:#d9dfea;--pt:#2f4a8a;--ok:#1f7a4d;--ng:#b3261e;--na:#6b7280}
+@media (prefers-color-scheme:dark){:root{--bg:#10151f;--card:#18202e;--ink:#e8edf6;--sub:#9aa5b8;--line:#2b3548;--pt:#7c9bec;--ok:#59c48d;--ng:#ff8a80;--na:#9aa5b8}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.5 -apple-system,"Apple SD Gothic Neo","Malgun Gothic",sans-serif;padding-bottom:88px}
+header{position:sticky;top:0;z-index:5;background:var(--pt);color:#fff;padding:12px 16px;display:flex;justify-content:space-between;align-items:center}
+header h1{font-size:17px;margin:0}
+header button{background:rgba(255,255,255,.18);color:#fff;border:0;border-radius:8px;padding:8px 12px;font-size:14px}
+main{padding:12px 16px;max-width:720px;margin:0 auto}
+.card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:14px;margin-bottom:12px}
+h2{font-size:16px;margin:0 0 10px}
+label{display:block;font-size:14px;color:var(--sub);margin:10px 0 4px}
+input,select,textarea{width:100%;font:inherit;color:var(--ink);background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:11px 12px}
+textarea{min-height:96px}
+.item{padding:12px 0;border-top:1px solid var(--line)}
+.item:first-of-type{border-top:0}
+.q{margin-bottom:8px}
+.seg{display:flex;gap:8px}
+.seg label{flex:1;margin:0;text-align:center}
+.seg input{position:absolute;opacity:0;pointer-events:none;width:0}
+.seg span{display:block;padding:11px 0;border:1.5px solid var(--line);border-radius:10px;font-size:15px;color:var(--ink);background:var(--bg)}
+.seg input:checked+span.o{background:var(--ok);border-color:var(--ok);color:#fff}
+.seg input:checked+span.x{background:var(--ng);border-color:var(--ng);color:#fff}
+.seg input:checked+span.n{background:var(--na);border-color:var(--na);color:#fff}
+.seg input:focus-visible+span{outline:3px solid var(--pt)}
+.note{margin-top:8px;display:none}
+.item.bad .note{display:block}
+.btn{border:0;border-radius:10px;padding:12px 14px;font:inherit;background:var(--pt);color:#fff}
+.btn.line{background:transparent;color:var(--pt);border:1.5px solid var(--pt)}
+.btn.red{background:transparent;color:var(--ng);border:1.5px solid var(--ng)}
+.row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.thumbs{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:10px}
+.thumbs div{position:relative}
+.thumbs img{width:100%;aspect-ratio:1;object-fit:cover;border-radius:8px;display:block}
+.thumbs button{position:absolute;right:4px;top:4px;background:rgba(0,0,0,.65);color:#fff;border:0;border-radius:6px;padding:4px 8px;font-size:12px}
+canvas.sig{width:100%;height:150px;background:#fff;border:1.5px dashed var(--line);border-radius:10px;touch-action:none;display:block}
+.sigitem{display:flex;gap:10px;align-items:center;margin-top:10px}
+.sigitem img{height:48px;background:#fff;border:1px solid var(--line);border-radius:6px}
+.bar{position:fixed;left:0;right:0;bottom:0;background:var(--card);border-top:1px solid var(--line);padding:10px 16px calc(10px + env(safe-area-inset-bottom));display:flex;gap:8px;z-index:6}
+.bar .btn{flex:1}
+.msg{font-size:13px;color:var(--sub);margin-top:6px}
+.tag{display:inline-block;font-size:12px;border-radius:6px;padding:2px 8px;background:var(--bg);border:1px solid var(--line);color:var(--sub)}
+.list .card .row{justify-content:space-between}
+.hide{display:none}
+</style>
+</head>
+<body>
+<header><h1 id="ttl">현장 안전점검</h1><button id="toggle" type="button">저장 목록</button></header>
+<main>
+<section id="listView" class="list hide"></section>
+<form id="form" autocomplete="off">
+  <div class="card">
+    <h2>점검 정보</h2>
+    <label for="f_date">점검 일시</label><input type="datetime-local" id="f_date" name="date">
+    <label for="f_inspector">점검자</label><input id="f_inspector" name="inspector" placeholder="이름">
+    <label for="f_type">사업유형</label>
+    <select id="f_type" name="type"><option value="">선택</option><option>공익활동</option><option>역량활용</option><option>공동체사업</option><option>취업형</option></select>
+    <label for="f_project">사업단명</label><input id="f_project" name="project">
+    <label for="f_place">활동 장소</label><input id="f_place" name="place">
+  </div>
+  <div id="sections"></div>
+  <div class="card">
+    <h2>종합 의견 및 시정 조치</h2>
+    <label>종합 점검 결과</label>
+    <div class="seg" id="overall">
+      <label><input type="radio" name="overall" value="양호"><span class="o">양호</span></label>
+      <label><input type="radio" name="overall" value="보통" checked><span class="n">보통</span></label>
+      <label><input type="radio" name="overall" value="불량"><span class="x">불량</span></label>
+    </div>
+    <label for="f_actions">주요 조치 사항</label><textarea id="f_actions" name="actions"></textarea>
+  </div>
+  <div class="card">
+    <h2>현장 안전교육 사진</h2>
+    <div class="row">
+      <button type="button" class="btn" id="takePhoto">사진 촬영</button>
+      <button type="button" class="btn line" id="pickPhoto">앨범에서 선택</button>
+    </div>
+    <input type="file" id="cam" accept="image/*" capture="environment" class="hide">
+    <input type="file" id="alb" accept="image/*" multiple class="hide">
+    <div class="msg">사진은 가로 1280px 이내로 줄여서 저장합니다. 주민등록번호가 보이는 서류는 찍지 마세요.</div>
+    <div class="thumbs" id="thumbs"></div>
+  </div>
+  <div class="card">
+    <h2>참여자 서명</h2>
+    <label for="s_name">성명</label><input id="s_name" placeholder="참여자 이름">
+    <label>서명 (손가락으로 그려 주세요)</label>
+    <canvas class="sig" id="sig"></canvas>
+    <div class="row" style="margin-top:8px">
+      <button type="button" class="btn" id="sigAdd">서명 추가</button>
+      <button type="button" class="btn line" id="sigClear">다시 쓰기</button>
+    </div>
+    <div id="sigs"></div>
+  </div>
+</form>
+</main>
+<div class="bar" id="bar">
+  <button class="btn line" id="btnNew" type="button">새 점검</button>
+  <button class="btn" id="btnSave" type="button">임시저장</button>
+  <button class="btn" id="btnExport" type="button">파일로 내보내기</button>
+</div>
+<script>
+var SECTIONS=[
+ ["1. 개인 보호구 및 복장 상태",["활동에 적합한 조끼 또는 유니폼을 착용하였는가?","미끄러지지 않는 신발(운동화 등)을 착용하였는가?","작업 성격에 맞는 장갑, 마스크, 모자 등을 구비했는가?","(실외) 충분한 식수와 햇빛 가리개(모자 등)가 있는가?"]],
+ ["2. 참여자 건강 및 컨디션",["활동 전 참여자의 건강 상태(혈압, 어지럼증 등)를 확인 했는가?","음주 상태이거나 약물 복용으로 인한 이상 징후는 없는가?","고령자의 보행 상태가 불안정하거나 거동이 불편해 보이지 않는가?"]],
+ ["3. 활동 현장 안전 환경",["바닥에 미끄러운 물질(물, 기름)이나 걸려 넘어질 장애물은 없는가?","활동 구역 내에 위험한 경사로, 계단, 단차가 표시되어 있는가?","차량 통행이 잦은 곳에서 활동 시 안전 경고판/안전봉이 설치되었는가?","활동 장소 인근에 비상 구급함이 비치되어 있는가?"]],
+ ["4. 장비 및 도구 안전",["사용하는 도구(집게, 빗자루 등)의 손잡이가 파손되지 않았는가?","무거운 물건을 직접 들어 올리는 무리한 작업은 없는가?","전기 기구 사용 시 전선 피복이 벗겨진 곳은 없는가?"]]
+];
+var DB=null, cur=null;
+function $(i){return document.getElementById(i)}
+function uid(){return 'c'+Date.now().toString(36)+Math.random().toString(36).slice(2,6)}
+function nowLocal(){var d=new Date();d.setMinutes(d.getMinutes()-d.getTimezoneOffset());return d.toISOString().slice(0,16)}
+function blank(){var a={};SECTIONS.forEach(function(s,i){s[1].forEach(function(q,j){a['q'+i+'_'+j]={r:'',n:''}})});
+ return {id:uid(),date:nowLocal(),inspector:localStorage.getItem('fs_inspector')||'',type:'',project:'',place:'',answers:a,overall:'보통',actions:'',photos:[],sigs:[],updated:0}}
+
+/* 저장소: IndexedDB (사진이 커서 localStorage 사용 안 함) */
+function openDB(cb){var rq=indexedDB.open('field_safety',1);rq.onupgradeneeded=function(){rq.result.createObjectStore('rec',{keyPath:'id'})};
+ rq.onsuccess=function(){DB=rq.result;cb()};rq.onerror=function(){alert('이 브라우저에서는 임시저장을 쓸 수 없습니다. (사생활 보호 모드인지 확인해 주세요)');cb()}}
+function putRec(r,cb){if(!DB){cb&&cb();return}var t=DB.transaction('rec','readwrite');t.objectStore('rec').put(r);t.oncomplete=function(){cb&&cb()}}
+function allRecs(cb){if(!DB){cb([]);return}var o=[],c=DB.transaction('rec').objectStore('rec').openCursor();c.onsuccess=function(){var x=c.result;if(x){o.push(x.value);x.continue()}else{o.sort(function(a,b){return b.updated-a.updated});cb(o)}}}
+function delRec(id,cb){var t=DB.transaction('rec','readwrite');t.objectStore('rec').delete(id);t.oncomplete=cb}
+
+/* 화면 만들기 */
+function build(){
+ var h='';
+ SECTIONS.forEach(function(s,i){h+='<div class="card"><h2>'+s[0]+'</h2>';
+  s[1].forEach(function(q,j){var k='q'+i+'_'+j;
+   h+='<div class="item" id="it_'+k+'"><div class="q">'+q+'</div><div class="seg">'+
+   '<label><input type="radio" name="'+k+'" value="o"><span class="o">적합</span></label>'+
+   '<label><input type="radio" name="'+k+'" value="x"><span class="x">부적합</span></label>'+
+   '<label><input type="radio" name="'+k+'" value="n"><span class="n">해당없음</span></label></div>'+
+   '<div class="note"><label for="n_'+k+'">조치 및 특이사항</label><input id="n_'+k+'" data-k="'+k+'"></div></div>'});
+  h+='</div>'});
+ $('sections').innerHTML=h;
+}
+function fill(r){
+ $('f_date').value=r.date;$('f_inspector').value=r.inspector;$('f_type').value=r.type;$('f_project').value=r.project;$('f_place').value=r.place;
+ Object.keys(r.answers).forEach(function(k){var a=r.answers[k];
+  var el=document.querySelector('input[name="'+k+'"][value="'+a.r+'"]');if(el)el.checked=true;else{var o2=document.querySelector('input[name="'+k+'"]:checked');if(o2)o2.checked=false}
+  $('n_'+k).value=a.n;$('it_'+k).classList.toggle('bad',a.r==='x')});
+ var o=document.querySelector('input[name="overall"][value="'+r.overall+'"]');if(o)o.checked=true;
+ $('f_actions').value=r.actions;drawThumbs();drawSigs();
+}
+function collect(){
+ cur.date=$('f_date').value;cur.inspector=$('f_inspector').value.trim();cur.type=$('f_type').value;cur.project=$('f_project').value.trim();cur.place=$('f_place').value.trim();
+ Object.keys(cur.answers).forEach(function(k){var c=document.querySelector('input[name="'+k+'"]:checked');cur.answers[k]={r:c?c.value:'',n:$('n_'+k).value}});
+ var o=document.querySelector('input[name="overall"]:checked');cur.overall=o?o.value:'보통';cur.actions=$('f_actions').value;
+ if(cur.inspector)localStorage.setItem('fs_inspector',cur.inspector);
+}
+$('sections').addEventListener('change',function(e){if(e.target.type==='radio'){$('it_'+e.target.name).classList.toggle('bad',e.target.value==='x')}});
+
+/* 사진: 줄여서 JPEG 로 보관 */
+function shrink(file,cb){var fr=new FileReader();fr.onload=function(){var im=new Image();im.onload=function(){
+ var w=im.width,h=im.height,m=1280;if(w>m){h=Math.round(h*m/w);w=m}
+ var c=document.createElement('canvas');c.width=w;c.height=h;c.getContext('2d').drawImage(im,0,0,w,h);cb(c.toDataURL('image/jpeg',0.8))};
+ im.onerror=function(){alert('사진을 읽지 못했습니다.')};im.src=fr.result};fr.readAsDataURL(file)}
+function addFiles(list){var n=list.length,i=0;if(!n)return;(function next(){if(i>=n){drawThumbs();return}
+ shrink(list[i++],function(d){cur.photos.push(d);next()})})()}
+$('takePhoto').onclick=function(){$('cam').click()};$('pickPhoto').onclick=function(){$('alb').click()};
+$('cam').onchange=function(){addFiles(this.files);this.value=''};$('alb').onchange=function(){addFiles(this.files);this.value=''};
+function drawThumbs(){var h='';cur.photos.forEach(function(d,i){h+='<div><img src="'+d+'" alt="사진 '+(i+1)+'"><button type="button" data-i="'+i+'">삭제</button></div>'});
+ $('thumbs').innerHTML=h}
+$('thumbs').onclick=function(e){var i=e.target.getAttribute&&e.target.getAttribute('data-i');if(i!==null&&i!==undefined&&e.target.tagName==='BUTTON'){cur.photos.splice(+i,1);drawThumbs()}};
+
+/* 서명 */
+var cv=$('sig'),cx=cv.getContext('2d'),drawing=false,dirty=false;
+function sizeCanvas(){var r=cv.getBoundingClientRect(),d=window.devicePixelRatio||1;cv.width=Math.round(r.width*d);cv.height=Math.round(r.height*d);cx.scale(d,d);cx.lineWidth=2.5;cx.lineCap='round';cx.strokeStyle='#111';dirty=false}
+function pt(e){var r=cv.getBoundingClientRect();return [e.clientX-r.left,e.clientY-r.top]}
+cv.addEventListener('pointerdown',function(e){drawing=true;cv.setPointerCapture(e.pointerId);var p=pt(e);cx.beginPath();cx.moveTo(p[0],p[1]);cx.lineTo(p[0]+0.1,p[1]+0.1);cx.stroke();dirty=true});
+cv.addEventListener('pointermove',function(e){if(!drawing)return;var p=pt(e);cx.lineTo(p[0],p[1]);cx.stroke()});
+['pointerup','pointercancel'].forEach(function(n){cv.addEventListener(n,function(){drawing=false})});
+$('sigClear').onclick=function(){cx.clearRect(0,0,cv.width,cv.height);dirty=false};
+$('sigAdd').onclick=function(){var nm=$('s_name').value.trim();if(!nm){alert('성명을 입력해 주세요.');return}if(!dirty){alert('서명을 그려 주세요.');return}
+ cur.sigs.push({name:nm,img:cv.toDataURL('image/png')});$('s_name').value='';cx.clearRect(0,0,cv.width,cv.height);dirty=false;drawSigs()};
+function drawSigs(){var h='';cur.sigs.forEach(function(s,i){h+='<div class="sigitem"><img src="'+s.img+'" alt="서명"><b>'+esc(s.name)+'</b><button type="button" class="btn red" data-s="'+i+'">삭제</button></div>'});
+ $('sigs').innerHTML=h||'<div class="msg">아직 받은 서명이 없습니다.</div>'}
+$('sigs').onclick=function(e){var i=e.target.getAttribute&&e.target.getAttribute('data-s');if(i!==null&&i!==undefined){cur.sigs.splice(+i,1);drawSigs()}};
+function esc(s){return String(s).replace(/[&<>"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]})}
+
+/* 저장·내보내기 */
+function stamp(){var d=new Date(),p=function(n){return String(n).padStart(2,'0')};return d.getFullYear()+'년'+p(d.getMonth()+1)+'월'+p(d.getDate())+'일'+p(d.getHours())+'시'+p(d.getMinutes())+'분'}
+function save(cb){collect();cur.updated=Date.now();putRec(cur,function(){cb&&cb()})}
+$('btnSave').onclick=function(){save(function(){toast('임시저장했습니다. 휴대폰 안에 보관됩니다.')})};
+$('btnExport').onclick=function(){save(function(){
+ var bad=[];if(!cur.project)bad.push('사업단명');if(!cur.inspector)bad.push('점검자');
+ if(bad.length){alert(bad.join(', ')+'을(를) 입력해야 파일 이름을 만들 수 있습니다.');return}
+ var miss=0;for(var k in cur.answers)if(!cur.answers[k].r)miss++;
+ if(miss&&!confirm('결과를 고르지 않은 항목이 '+miss+'개 있습니다. 그대로 내보낼까요?'))return;
+ var obj={format:'field_safety',version:1,exported:new Date().toISOString(),record:cur};
+ var name=cur.project+'-'+stamp()+'-'+cur.inspector+'.json';
+ var blob=new Blob([JSON.stringify(obj)],{type:'application/json'});
+ var a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=name;document.body.appendChild(a);a.click();
+ setTimeout(function(){URL.revokeObjectURL(a.href);a.remove()},1000);toast('파일로 내보냈습니다: '+name)})};
+var tt;function toast(m){var t=document.getElementById('toast');if(!t){t=document.createElement('div');t.id='toast';t.style.cssText='position:fixed;left:16px;right:16px;bottom:84px;background:#16213a;color:#fff;border-radius:10px;padding:12px 14px;z-index:9;font-size:14px';document.body.appendChild(t)}
+ t.textContent=m;t.style.display='block';clearTimeout(tt);tt=setTimeout(function(){t.style.display='none'},3500)}
+
+/* 목록 */
+function showList(){allRecs(function(rs){var h='<div class="card"><h2>임시저장 목록</h2><div class="msg">이 휴대폰 안에만 저장되어 있습니다. 사무실에서 올린 뒤에도 자동으로 지워지지 않으니 확인 후 삭제하세요.</div></div>';
+ if(!rs.length)h+='<div class="card">저장된 점검이 없습니다.</div>';
+ rs.forEach(function(r){var bad=0;for(var k in r.answers)if(r.answers[k].r==='x')bad++;
+  h+='<div class="card"><div class="row"><b>'+esc(r.project||'(사업단명 없음)')+'</b><span class="tag">'+esc(r.overall)+'</span></div>'+
+  '<div class="msg">'+esc((r.date||'').replace('T',' '))+' / '+esc(r.inspector||'점검자 없음')+' / 부적합 '+bad+'건 / 사진 '+r.photos.length+'장 / 서명 '+r.sigs.length+'명</div>'+
+  '<div class="row" style="margin-top:10px;justify-content:flex-start"><button class="btn" data-open="'+r.id+'">열기</button><button class="btn red" data-del="'+r.id+'">삭제</button></div></div>'});
+ $('listView').innerHTML=h})}
+$('listView').onclick=function(e){var o=e.target.getAttribute('data-open'),d=e.target.getAttribute('data-del');
+ if(o){allRecs(function(rs){cur=rs.filter(function(r){return r.id===o})[0];fill(cur);setView(false)})}
+ if(d&&confirm('이 점검을 삭제할까요? 되돌릴 수 없습니다.')){delRec(d,showList)}};
+function setView(list){$('listView').classList.toggle('hide',!list);$('form').classList.toggle('hide',list);$('bar').classList.toggle('hide',list);
+ $('toggle').textContent=list?'점검 화면':'저장 목록';$('ttl').textContent=list?'저장 목록':'현장 안전점검';if(list)showList();else sizeCanvasLater()}
+$('toggle').onclick=function(){setView($('form').classList.contains('hide')?false:true)};
+$('btnNew').onclick=function(){if(confirm('새 점검을 시작합니다. 지금 내용은 임시저장됩니다.')){save(function(){cur=blank();fill(cur)})}};
+function sizeCanvasLater(){setTimeout(sizeCanvas,50)}
+window.addEventListener('resize',function(){if(!dirty)sizeCanvas()});
+window.addEventListener('pagehide',function(){if(cur&&DB){try{collect();cur.updated=Date.now();putRec(cur)}catch(e){}}});
+
+if('serviceWorker' in navigator&&(location.protocol==='https:'||location.hostname==='localhost')){navigator.serviceWorker.register('sw.js').catch(function(){})}
+if(navigator.storage&&navigator.storage.persist){navigator.storage.persist().catch(function(){})}
+build();
+openDB(function(){
+ allRecs(function(rs){cur=rs.length&&!rs[0].exported&&rs[0]?rs[0]:blank();fill(cur);sizeCanvas()})});
+</script>
+</body>
+</html>
